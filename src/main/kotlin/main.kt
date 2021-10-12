@@ -9,11 +9,14 @@ import java.awt.Dimension
 import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
 import javax.swing.WindowConstants
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
 
 
 fun main() {
     val diagram = readLine()!!
-    if (diagram != "circle" && diagram != "step") throw WrongTypeOfDiagram()
+    if (diagram != "circle" && diagram != "step" && diagram != "petals") throw WrongTypeOfDiagram()
     val m: MutableMap<String, Int> = mutableMapOf()
     while (true) {
         val value = readLine() ?: break
@@ -44,41 +47,46 @@ class Renderer(val layer: SkiaLayer, m: Map<String, Int>, s: String) : SkiaRende
     val black = Paint().apply {
         color = 0xff000000.toInt()
         mode = PaintMode.FILL
-        strokeWidth = 1f
+        strokeWidth = 5f
     }
     val purple = Paint().apply {
         color = 0xffff00ff.toInt()
         mode = PaintMode.FILL
-        strokeWidth = 1f
+        strokeWidth = 5f
     }
     val yellow = Paint().apply {
         color = 0xffffff00.toInt()
         mode = PaintMode.FILL
-        strokeWidth = 1f
+        strokeWidth = 5f
     }
     val blue = Paint().apply {
         color = 0xff0000ff.toInt()
         mode = PaintMode.FILL
-        strokeWidth = 1f
+        strokeWidth = 5f
     }
     val green = Paint().apply {
         color = 0xff00ff00.toInt()
         mode = PaintMode.FILL
-        strokeWidth = 1f
+        strokeWidth = 5f
     }
     val grey = Paint().apply {
         color = 0xff888888.toInt()
         mode = PaintMode.FILL
-        strokeWidth = 1f
+        strokeWidth = 5f
     }
     val red = Paint().apply {
         color = 0xffff0000.toInt()
         mode = PaintMode.FILL
-        strokeWidth = 1f
+        strokeWidth = 5f
+    }
+    val greyLite = Paint().apply {
+        color = 0xffcccccc.toInt()
+        mode = PaintMode.FILL
+        strokeWidth = 3f
     }
     val ourMap = m
     val vid = s
-    val paints: List<Paint> = listOf(black, purple, blue, green, grey, red, yellow)
+    val paints: List<Paint> = listOf(black, purple, blue, green, grey, red, yellow, greyLite)
     val names: List<String> = listOf("black", "purple", "blue", "green", "grey", "red", "yellow")
     override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
         val contentScale = layer.contentScale
@@ -106,11 +114,30 @@ class Renderer(val layer: SkiaLayer, m: Map<String, Int>, s: String) : SkiaRende
             val minInMap = minValueInMap(ourMap)
             var top = 10F
             var right: Float
-            for ((ind, i) in sortMap.keys.withIndex()) {
-                right = 10F + sortMap[i]!!.toFloat()/minInMap * 60F
-                canvas.drawRect(Rect(10F, top, 10F + right, top + 20F), paints[ind])
-                canvas.drawString(i,right +20F, top + 15F, font, paints[ind])
-                top+=40F
+            for (i in sortMap.keys) {
+                right = 10F + sortMap[i]!!.toFloat() / minInMap * 60F
+                canvas.drawRect(Rect(10F, top, 10F + right, top + 20F), paints[2])
+                canvas.drawString(i, right + 20F, top + 15F, font, paints[4])
+                top += 40F
+            }
+        }
+        if (vid == "petals") {
+            val startx = w - 210f
+            val starty = h - 210f
+            val points = coordinates(ourMap, startx, starty)
+            var h1 = 30F
+            for ((ind, i) in points.withIndex()) {
+                canvas.drawLine(startx, starty, i.first, i.second, paints[ind])
+            }
+            for (i in points.indices) {
+                if (i == points.size - 1) {
+                    canvas.drawLine(points[i].first, points[i].second, points[0].first, points[0].second, greyLite)
+                } else canvas.drawLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second, greyLite)
+            }
+            canvas.drawCircle(startx, starty, 3f, greyLite)
+            for ((ind, i) in ourMap.keys.withIndex()) {
+                canvas.drawString(names[ind] + " - $i", 20F, h1, font, paints[ind])
+                h1 += 30F
             }
         }
         layer.needRedraw()
@@ -130,15 +157,15 @@ object MyMouseMotionAdapter : MouseMotionAdapter() {
     }
 }
 
-fun minValueInMap(m: Map<String, Int>): Float{
+fun minValueInMap(m: Map<String, Int>): Float {
     var minInMap = 1e9.toFloat()
-    for(i in m.values){
-        if (i < minInMap ) minInMap = i.toFloat()
+    for (i in m.values) {
+        if (i < minInMap) minInMap = i.toFloat()
     }
     return minInMap
 }
 
-fun anglesForCircleDiagram(m: Map<String, Int>): List<Float>{
+fun anglesForCircleDiagram(m: Map<String, Int>): List<Float> {
     var s = 0F
     for (i in m.values) s += i.toFloat()
     val angles = mutableListOf(0F)
@@ -146,4 +173,15 @@ fun anglesForCircleDiagram(m: Map<String, Int>): List<Float>{
         angles += angles.last() + 360f * i.toFloat() / s
     }
     return angles
+}
+
+fun coordinates(m: Map<String, Int>, startx: Float, starty: Float): List<Pair<Float, Float>> {
+    val x = minValueInMap(m)
+    var angle = 0F
+    val ans: MutableList<Pair<Float, Float>> = mutableListOf()
+    for (i in m.values) {
+        ans.add(Pair(startx + cos(angle) * i / x * 60F, starty + sin(angle) * i / x * 60F))
+        angle += 2 * Math.PI.toFloat() / m.size
+    }
+    return ans
 }
