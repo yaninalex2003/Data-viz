@@ -12,15 +12,15 @@ import javax.swing.WindowConstants
 
 
 fun main() {
-    val diag = readLine()!!
+    val diagram = readLine()!!
+    if (diagram != "circle" && diagram != "step") throw WrongTypeOfDiagram()
     val m: MutableMap<String, Int> = mutableMapOf()
     while (true) {
         val value = readLine() ?: break
         val number: String = readLine() ?: throw NoNumericalValue()
         m += value to number.toInt()
     }
-    createWindow("pf-2021-viz", m, diag)
-
+    createWindow("pf-2021-viz", m, diagram)
 }
 
 fun createWindow(title: String, m: Map<String, Int>, s: String) = runBlocking(Dispatchers.Swing) {
@@ -91,14 +91,8 @@ class Renderer(val layer: SkiaLayer, m: Map<String, Int>, s: String) : SkiaRende
             val top = h - 410f
             val right = w.toFloat() - 10f
             val bottom = h.toFloat() - 10f
-            var s = 0F
-            val number = ourMap.size
-            for (i in ourMap.values) s += i.toFloat()
-            val angles = mutableListOf(0F)
-            for (i in ourMap.values) {
-                angles += angles.last() + 360f * i.toFloat() / s
-            }
-            for (i in 0 until number) {
+            val angles = anglesForCircleDiagram(ourMap)
+            for (i in 0 until ourMap.size) {
                 canvas.drawArc(left, top, right, bottom, angles[i], angles[i + 1] - angles[i], true, paints[i])
             }
             var h1 = 30F
@@ -109,16 +103,14 @@ class Renderer(val layer: SkiaLayer, m: Map<String, Int>, s: String) : SkiaRende
         }
         if (vid == "step") {
             val sortMap = ourMap.toList().sortedBy { it.second }.toMap()
-            var minInMap = 1e9.toFloat()
-            for(i in ourMap.values){
-                if (i < minInMap ) minInMap = i.toFloat()
-            }
-            var ind = 10F
-            for ((u, i) in sortMap.keys.withIndex()) {
-                val pravo = 10F + sortMap[i]!!.toFloat()/minInMap * 60F
-                canvas.drawRect(Rect(10F, ind, 10F + pravo * 60F, ind + 20F), paints[u])
-                canvas.drawString(i,pravo +20F, ind + 20F, font, paints[u])
-                ind+=40F
+            val minInMap = minValueInMap(ourMap)
+            var top = 10F
+            var right: Float
+            for ((ind, i) in sortMap.keys.withIndex()) {
+                right = 10F + sortMap[i]!!.toFloat()/minInMap * 60F
+                canvas.drawRect(Rect(10F, top, 10F + right, top + 20F), paints[ind])
+                canvas.drawString(i,right +20F, top + 15F, font, paints[ind])
+                top+=40F
             }
         }
         layer.needRedraw()
@@ -136,4 +128,22 @@ object MyMouseMotionAdapter : MouseMotionAdapter() {
         State.mouseX = event.x.toFloat()
         State.mouseY = event.y.toFloat()
     }
+}
+
+fun minValueInMap(m: Map<String, Int>): Float{
+    var minInMap = 1e9.toFloat()
+    for(i in m.values){
+        if (i < minInMap ) minInMap = i.toFloat()
+    }
+    return minInMap
+}
+
+fun anglesForCircleDiagram(m: Map<String, Int>): List<Float>{
+    var s = 0F
+    for (i in m.values) s += i.toFloat()
+    val angles = mutableListOf(0F)
+    for (i in m.values) {
+        angles += angles.last() + 360f * i.toFloat() / s
+    }
+    return angles
 }
