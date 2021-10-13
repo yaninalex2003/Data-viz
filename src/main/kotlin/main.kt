@@ -17,16 +17,16 @@ import kotlin.math.sin
 fun main() {
     val diagram = readLine()!!
     if (diagram != "circle" && diagram != "step" && diagram != "petals") throw WrongTypeOfDiagram()
-    val m: MutableMap<String, Int> = mutableMapOf()
+    val m: MutableMap<String, Float> = mutableMapOf()
     while (true) {
         val value = readLine() ?: break
         val number: String = readLine() ?: throw NoNumericalValue()
-        m += value to number.toInt()
+        m += value to number.toFloat()
     }
     createWindow("pf-2021-viz", m, diagram)
 }
 
-fun createWindow(title: String, m: Map<String, Int>, s: String) = runBlocking(Dispatchers.Swing) {
+fun createWindow(title: String, m: Map<String, Float>, s: String) = runBlocking(Dispatchers.Swing) {
     val window = SkiaWindow()
     window.defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
     window.title = title
@@ -41,7 +41,7 @@ fun createWindow(title: String, m: Map<String, Int>, s: String) = runBlocking(Di
     window.isVisible = true
 }
 
-class Renderer(val layer: SkiaLayer, m: Map<String, Int>, s: String) : SkiaRenderer {
+class Renderer(val layer: SkiaLayer, m: Map<String, Float>, s: String) : SkiaRenderer {
     val typeface = Typeface.makeFromFile("fonts/JetBrainsMono-Regular.ttf")
     val font = Font(typeface, 20f)
     val black = Paint().apply {
@@ -87,7 +87,7 @@ class Renderer(val layer: SkiaLayer, m: Map<String, Int>, s: String) : SkiaRende
     val ourMap = m
     val vid = s
     val paints: List<Paint> = listOf(black, purple, blue, green, grey, red, yellow, greyLite)
-    val names: List<String> = listOf("black", "purple", "blue", "green", "grey", "red", "yellow")
+    val names: List<String> = listOf("black", "purple", "blue", "green", "grey", "red", "yellow", "lite grey")
     override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
         val contentScale = layer.contentScale
         canvas.scale(contentScale, contentScale)
@@ -122,7 +122,7 @@ class Renderer(val layer: SkiaLayer, m: Map<String, Int>, s: String) : SkiaRende
             }
         }
         if (vid == "petals") {
-            val startx = w - 210f
+            val startx = w - 280f
             val starty = h - 210f
             val points = coordinates(ourMap, startx, starty)
             var h1 = 30F
@@ -132,7 +132,13 @@ class Renderer(val layer: SkiaLayer, m: Map<String, Int>, s: String) : SkiaRende
             for (i in points.indices) {
                 if (i == points.size - 1) {
                     canvas.drawLine(points[i].first, points[i].second, points[0].first, points[0].second, greyLite)
-                } else canvas.drawLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second, greyLite)
+                } else canvas.drawLine(
+                    points[i].first,
+                    points[i].second,
+                    points[i + 1].first,
+                    points[i + 1].second,
+                    greyLite
+                )
             }
             canvas.drawCircle(startx, starty, 3f, greyLite)
             for ((ind, i) in ourMap.keys.withIndex()) {
@@ -157,25 +163,31 @@ object MyMouseMotionAdapter : MouseMotionAdapter() {
     }
 }
 
-fun minValueInMap(m: Map<String, Int>): Float {
-    var minInMap = 1e9.toFloat()
+fun minValueInMap(m: Map<String, Float>): Float {
+    var minInMap=0F
+    var x = true
     for (i in m.values) {
-        if (i < minInMap) minInMap = i.toFloat()
+        if (x) {
+            minInMap = i
+            x = false
+        } else {
+            if (i < minInMap) minInMap = i
+        }
     }
     return minInMap
 }
 
-fun anglesForCircleDiagram(m: Map<String, Int>): List<Float> {
+fun anglesForCircleDiagram(m: Map<String, Float>): List<Float> {
     var s = 0F
-    for (i in m.values) s += i.toFloat()
+    for (i in m.values) s += i
     val angles = mutableListOf(0F)
     for (i in m.values) {
-        angles += angles.last() + 360f * i.toFloat() / s
+        angles += angles.last() + 360f * i / s
     }
     return angles
 }
 
-fun coordinates(m: Map<String, Int>, startx: Float, starty: Float): List<Pair<Float, Float>> {
+fun coordinates(m: Map<String, Float>, startx: Float, starty: Float): List<Pair<Float, Float>> {
     val x = minValueInMap(m)
     var angle = 0F
     val ans: MutableList<Pair<Float, Float>> = mutableListOf()
